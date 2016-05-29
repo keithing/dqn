@@ -1,0 +1,4 @@
+log.txt
+models/*
+__pycache__
+theanorc
