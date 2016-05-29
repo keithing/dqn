@@ -94,7 +94,7 @@ def init_model():
 
 class DQN:
 
-    def __init__(self, batchsize=50, n_samples=400, reset=False):
+    def __init__(self, batchsize=50, n_samples=1000, reset=False):
         self.batchsize = batchsize
         self.n_samples = n_samples
 

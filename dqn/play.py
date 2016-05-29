@@ -90,8 +90,10 @@ def single_play(env, epsilon=.9, model=None):
             print(msg)
             break
 
-        # Update Replay Data
-        D.append(cache_data(observation, history, reward, action))
+        # Update Replay Data (Keep partial history so not training
+        # only on the most recent examples)
+        if np.random.rand(1) > .2:
+            D.append(cache_data(observation, history, reward, action))
 
         # Update history
         history.append(observation)
