@@ -22,8 +22,9 @@ def load_model():
     return(model)
 
 def custom_loss(y_true, y_pred):
-   mask = y_true / T.max(y_true)
-   err = y_pred - (y_true * mask)
+   a = y_true.nonzero()
+   zeros = y_pred - y_pred
+   err = T.inc_subtensor(zeros[a], y_pred[a] - y_true[a])
    clip_err = T.clip(err, -1.0, 1.0)
    return T.sum(T.square(clip_err), axis=-1)
 
