@@ -31,7 +31,7 @@ def custom_loss(y_true, y_pred):
 
 def calculate_y(s, a, r, s_prime, model, gamma=.99):
     r_next = model.predict(np.array([s_prime]))[0]
-    r_tot = r + gamma * np.max(r_next)
+    r_tot = r + gamma * np.max(r_next) + .000001
     y = [r_tot if i == a else 0.0 for i in range(len(r_next))]
     return y
 
@@ -115,8 +115,7 @@ class DQN:
     def generator(self, D):
         y = []
         X = []
-        np.random.shuffle(D)
-        for i in range(self.batchsize):
+        for i in np.random.randint(0, len(D), self.batchsize):
             d = D[i]
             y_ = calculate_y(d["s"],
                              int(d["action"]),

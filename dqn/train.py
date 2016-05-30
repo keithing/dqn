@@ -21,9 +21,9 @@ if __name__ == "__main__":
             print("History size: {}".format(len(D)), flush=True)
         try:
             D.extend(single_play(env, epsilon, dqn.model))
-            np.random.shuffle(D)
             dqn.fit(D)
-            D = D[:max_D_size]
+            if len(D) >= max_D_size:
+                D.pop(0)
         except Exception as e:
             print(e)
         if cnt % 50 == 0:
