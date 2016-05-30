@@ -12,17 +12,26 @@ from keras.layers.core import Dense, Activation, Dropout, Flatten
 from keras.regularizers import l2, l1
 from keras.models import model_from_json
 
+import theano
+import theano.tensor as T
+
 
 def load_model():
     model = model_from_json(open("models/cnn.json").read())
     model.load_weights("models/cnn.h5")
     return(model)
 
+def custom_loss(y_true, y_pred):
+   mask = y_true / T.max(y_true)
+   err = y_pred - (y_true * mask)
+   clip_err = T.clip(err, -1.0, 1.0)
+   return T.sum(T.square(clip_err), axis=-1)
+
 
 def calculate_y(s, a, r, s_prime, model, gamma=.99):
-    y = model.predict(np.array([s]))[0]
-    err = (r + gamma * np.max(model.predict(np.array([s_prime])))) - y[a]
-    y[a] += np.clip(err, -1.0, 1.0)
+    r_next = model.predict(np.array([s_prime]))[0]
+    r_tot = r + gamma * np.max(r_next)
+    y = [r_tot if i == a else 0.0 for i in range(len(r_next))]
     return y
 
 
@@ -102,7 +111,7 @@ class DQN:
         if reset:
             print("reseting the models")
             self.model = init_model()
-            self.model.compile(loss="mean_squared_error", optimizer=optimizer)
+            self.model.compile(loss=custom_loss, optimizer=optimizer)
         else:
             print("updating model")
             self.model = load_model()
