@@ -37,33 +37,31 @@ def calculate_y(s, a, r, s_prime, model, gamma=.99):
 
 def init_model():
 
-    # Params
-    lay1 = Convolution2D(
-        input_shape = (3, 105, 80),
+    model = Sequential()
+    model.add(Convolution2D(
+        input_shape = (4, 84, 84),
         nb_filter = 32,
-        nb_row = 9,
+        nb_row = 8,
         nb_col = 8,
         subsample = (4,4),
         dim_ordering='tf',
         init="glorot_uniform",
         border_mode="same",
-        W_regularizer=l2(0.01),
-        activation="relu")
-
-    lay2 = Convolution2D(
-        #input_shape = (32, 25, 18),
+        activation="relu"))
+    #model.add(BatchNormalization())
+    model.add(Convolution2D(
+        #input_shape = (64, 14, 14),
         nb_filter = 64,
-        nb_row = 5,
+        nb_row = 4,
         nb_col = 4,
         subsample = (2,2),
         dim_ordering='tf',
         init="glorot_uniform",
         border_mode="same",
-        W_regularizer=l2(0.01),
-        activation="relu")
-
-    lay3 = Convolution2D(
-        #input_shape = (64, 11, 8),
+        activation="relu"))
+    #model.add(BatchNormalization())
+    model.add(Convolution2D(
+        #input_shape = (64, 6, 6),
         nb_filter = 64,
         nb_row = 3,
         nb_col = 3,
@@ -71,33 +69,20 @@ def init_model():
         dim_ordering='tf',
         init="glorot_uniform",
         border_mode="same",
-        W_regularizer=l2(0.01),
-        activation="relu")
-
-    lay4 = Flatten()
-
-    lay5 = Dense(
-        #input_dim = 64 * 9 * 6 * 2,
+        activation="relu"))
+    #model.add(BatchNormalization())
+    model.add(Flatten())
+    model.add(Dense(
+        #input_dim = 64 * 4 * 4,
         output_dim=512,
         init="glorot_uniform",
-        W_regularizer=l1(0.01),
-        activation="relu")
-
-    lay6 = Dense(
+        activation="relu"))
+    #model.add(BatchNormalization())
+    model.add(Dense(
         #input_dim = 512,
         output_dim=6,
         init="glorot_uniform",
-        W_regularizer=l1(0.01),
-        activation="linear")
-
-
-    model = Sequential()
-    model.add(lay1)
-    model.add(lay2)
-    model.add(lay3)
-    model.add(lay4)
-    model.add(lay5)
-    model.add(lay6)
+        activation="linear"))
     return model
 
 
@@ -115,7 +100,7 @@ class DQN:
         else:
             print("updating model")
             self.model = load_model()
-            self.model.compile(loss="mean_squared_error", optimizer=optimizer)
+            self.model.compile(loss=custom_loss, optimizer=optimizer)
 
     def fit(self, D):
         try:

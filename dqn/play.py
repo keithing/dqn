@@ -19,7 +19,7 @@ def grayscale(rgb):
 
 
 def process_rgb(rbg):
-    return imresize(grayscale(rbg), .5)
+    return imresize(grayscale(rbg), (84, 84))
 
 
 def load_model():
