@@ -8,16 +8,17 @@ from play import single_play
 
 
 if __name__ == "__main__":
-    dqn = DQN(batchsize=50, n_samples=1000)
+    dqn = DQN(batchsize=50, n_samples=50)
     env = gym.make('Breakout-v0')
     cnt = 1
-    max_D_size = 150000
+    max_D_size = 300000
     D = []
     while True:
-        epsilon = max(1 - (cnt / 100000), .1)
-        while len(D) < max_D_size:
-            # Burn in a history to train on
+        epsilon = max(1 - (cnt / 10000), .1)
+        while len(D) < 1000:
+            # Create a history to train on
             D.extend(single_play(env, epsilon, dqn.model))
+            print("History size: {}".format(len(D)), flush=True)
         try:
             D.extend(single_play(env, epsilon, dqn.model))
             np.random.shuffle(D)

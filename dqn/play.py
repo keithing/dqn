@@ -31,7 +31,7 @@ def load_model():
 def play(n_times, record=False, epsilon=.9):
     env = gym.make('Breakout-v0')
     if record:
-        env.monitor.start('/home/kingersoll/share/breakout', force=True)
+        env.monitor.start('monitor/breakout', force=True)
     for i_episode in range(n_times):
         single_play(env, epsilon)
     if record:
@@ -49,7 +49,8 @@ def choose_action(env, history, model, epsilon=.9):
         # might get stuck of action 1 never called to send new ball
         X = np.array([history])
         expected_reward = model.predict(X)[0]
-        action = np.argmax(expected_reward)
+        p = np.divide(expected_reward, np.sum(expected_reward))
+        action = np.random.choice(len(p), p=p)
     return action
 
 
@@ -90,10 +91,8 @@ def single_play(env, epsilon=.9, model=None):
             print(msg)
             break
 
-        # Update Replay Data (Keep partial history so not training
-        # only on the most recent examples)
-        if np.random.rand(1) > .2:
-            D.append(cache_data(observation, history, reward, action))
+        # Update Replay Data
+        D.append(cache_data(observation, history, reward, action))
 
         # Update history
         history.append(observation)
