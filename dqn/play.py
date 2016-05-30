@@ -70,10 +70,11 @@ def cache_data(observation, history, reward, action):
 def single_play(env, epsilon=.9, model=None):
     model = model or load_model()
     observation = env.reset()
-    history = [process_rgb(observation) for _ in range(3)]
+    history = [process_rgb(observation) for _ in range(4)]
     rewards = []
     train_labels = []
     D = []
+    env.ale.setInt(b'frame_skip', 4)
     while True:
         env.render()
 
