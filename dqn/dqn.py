@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 
 import argparse
@@ -6,7 +7,7 @@ import sys
 import pickle
 from keras.layers.convolutional import Convolution2D
 from keras.layers.normalization import BatchNormalization
-from keras.optimizers import Adam
+from keras.optimizers import Adam, RMSprop
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Dropout, Flatten
 from keras.regularizers import l2, l1
@@ -86,14 +87,24 @@ def init_model():
         activation="linear"))
     return model
 
+def gen_minibatch(D, batchsize, model):
+    y = []
+    X = []
+    for i in np.random.randint(0, len(D), batchsize*20):
+        d = D[i]
+        y_ = calculate_y(d["s"], int(d["action"]), int(d["reward"]),
+                         np.array(d["s_prime"]), model, gamma=.99)
+        X.append(d["s"])
+        y.append(y_)
+    return np.array(X), np.array(y)
+
 
 class DQN:
 
-    def __init__(self, batchsize=50, n_samples=50, reset=False):
+    def __init__(self, batchsize=50, reset=False):
         self.batchsize = batchsize
-        self.n_samples = n_samples
 
-        optimizer = Adam()
+        optimizer = RMSprop(lr=.00025)
         if reset:
             print("reseting the models")
             self.model = init_model()
@@ -102,30 +113,16 @@ class DQN:
             print("updating model")
             self.model = load_model()
             self.model.compile(loss=custom_loss, optimizer=optimizer)
+        self.target_model = deepcopy(self.model)
 
-    def fit(self, D):
+    def fit(self, D, update_target_model=False):
         try:
-            for _ in range(20):
-                x, y = self.generator(D)
-                self.model.fit(x = x, y = y, batch_size=self.batchsize, nb_epoch=1)
+            if update_target_model:
+                self.target_model = deepcopy(self.model)
+            x, y = gen_minibatch(D, self.batchsize, self.target_model)
+            self.model.fit(x = x, y = y, batch_size=self.batchsize, nb_epoch=1)
         except Exception as e:
             print(e)
-
-
-    def generator(self, D):
-        y = []
-        X = []
-        for i in np.random.randint(0, len(D), self.batchsize):
-            d = D[i]
-            y_ = calculate_y(d["s"],
-                             int(d["action"]),
-                             int(d["reward"]),
-                             np.array(d["s_prime"]),
-                             self.model,
-                             gamma=.9)
-            X.append(d["s"])
-            y.append(y_)
-        return np.array(X), np.array(y)
 
 
     def save(self):

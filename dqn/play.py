@@ -42,29 +42,16 @@ def choose_action(env, history, model, epsilon=.9):
     """
     Decide whether to explore or exploit past information.
     """
-    explore = np.random.rand(1) < epsilon
-    if explore:
-        action = env.action_space.sample()
-    else:
-        # might get stuck of action 1 never called to send new ball
-        X = np.array([history])
-        expected_reward = model.predict(X)[0]
-        p = np.divide(expected_reward, np.sum(expected_reward))
-        action = np.random.choice(len(p), p=p)
-    return action
+    explore = lambda: np.random.rand(env.action_space.n)
+    exploit = lambda: model.predict(np.array([history]))[0]
+    rewards = explore() if np.random.rand(1) < epsilon else exploit()
+    return np.argmax(rewards)
 
 
 def cache_data(observation, history, reward, action):
-    """
-    Insert random fraction of data into D for training.
-    """
-    data = None
     s_prime = history[1:] + [observation]
-    data = {"s": history,
-            "reward": reward,
-            "action": action,
-            "s_prime": s_prime}
-    return data
+    d = {"s": history, "reward": reward, "action": action, "s_prime": s_prime}
+    return d
 
 
 def single_play(env, epsilon=.9, model=None):
@@ -76,7 +63,8 @@ def single_play(env, epsilon=.9, model=None):
     D = []
     env.ale.setInt(b'frame_skip', 4)
     while True:
-        env.render()
+        # Need to render only if recording
+        #env.render()
 
         # Take Action!
         action = choose_action(env, history, model, epsilon)
