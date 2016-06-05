@@ -8,7 +8,7 @@ from play import single_play
 
 
 if __name__ == "__main__":
-    dqn = DQN(batchsize=50)
+    dqn = DQN(batchsize=32)
     env = gym.make('Breakout-v0')
     cnt = 1
     max_D_size = 300000

@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy
 import os
 
 import argparse
@@ -23,17 +23,15 @@ def load_model():
     return(model)
 
 def custom_loss(y_true, y_pred):
-   a = y_true.nonzero()
-   zeros = y_pred - y_pred
-   err = T.inc_subtensor(zeros[a], y_pred[a] - y_true[a])
+   err = y_pred[y_true.nonzero()] - y_true.nonzero_values()
    clip_err = T.clip(err, -1.0, 1.0)
-   return T.sum(T.square(clip_err), axis=-1)
+   return T.sum(T.square(clip_err))
 
 
 def calculate_y(s, a, r, s_prime, model, gamma=.99):
     r_next = model.predict(np.array([s_prime]))[0]
-    r_tot = r + gamma * np.max(r_next) + .000001
-    y = [r_tot if i == a else 0.0 for i in range(len(r_next))]
+    y = [0.0] * len(r_next)
+    y[a] = r + gamma * np.max(r_next) + .000001
     return y
 
 
@@ -87,21 +85,21 @@ def init_model():
         activation="linear"))
     return model
 
-def gen_minibatch(D, batchsize, model):
+def gen_minibatch(D, batchsize, target_model):
     y = []
     X = []
-    for i in np.random.randint(0, len(D), batchsize*20):
+    for i in np.random.randint(0, len(D), batchsize):
         d = D[i]
         y_ = calculate_y(d["s"], int(d["action"]), int(d["reward"]),
-                         np.array(d["s_prime"]), model, gamma=.99)
+                         np.array(d["s_prime"]), target_model, gamma=.99)
         X.append(d["s"])
         y.append(y_)
-    return np.array(X), np.array(y)
+    return X, y
 
 
 class DQN:
 
-    def __init__(self, batchsize=50, reset=False):
+    def __init__(self, batchsize=32, reset=False):
         self.batchsize = batchsize
 
         optimizer = RMSprop(lr=.00025)
@@ -113,14 +111,16 @@ class DQN:
             print("updating model")
             self.model = load_model()
             self.model.compile(loss=custom_loss, optimizer=optimizer)
-        self.target_model = deepcopy(self.model)
+        self.target_model = copy(self.model)
 
     def fit(self, D, update_target_model=False):
         try:
             if update_target_model:
-                self.target_model = deepcopy(self.model)
-            x, y = gen_minibatch(D, self.batchsize, self.target_model)
-            self.model.fit(x = x, y = y, batch_size=self.batchsize, nb_epoch=1)
+                self.target_model = copy(self.model)
+            for _ in range(13):
+                X, Y = gen_minibatch(D, self.batchsize, self.target_model)
+                err = self.model.train_on_batch(X, Y)
+                print("Err: {}".format(err))
         except Exception as e:
             print(e)
 
