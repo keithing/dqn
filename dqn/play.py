@@ -4,22 +4,9 @@ import logging
 import gym
 from keras.models import model_from_json
 import numpy as np
-from scipy.misc import imresize
 
+from dqn import ReplayMemory
 
-
-def grayscale(rgb):
-    """
-    http://stackoverflow.com/questions/12201577/
-    how-can-i-convert-an-rgb-image-into-grayscale-in-python
-    """
-    r, g, b = rgb[:,:,0], rgb[:,:,1], rgb[:,:,2]
-    gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
-    return gray
-
-
-def process_rgb(rbg):
-    return imresize(grayscale(rbg), (84, 84))
 
 
 def load_model():
@@ -31,7 +18,7 @@ def load_model():
 def play(n_times, record=False, epsilon=.9):
     env = gym.make('Breakout-v0')
     if record:
-        env.monitor.start('monitor/breakout', force=True)
+        env.monitor.start('/home/kingersoll/share/breakout', force=True)
     for i_episode in range(n_times):
         single_play(env, epsilon)
     if record:
@@ -48,46 +35,30 @@ def choose_action(env, history, model, epsilon=.9):
     return np.argmax(rewards)
 
 
-def cache_data(observation, history, reward, action):
-    s_prime = history[1:] + [observation]
-    d = {"s": history, "reward": reward, "action": action, "s_prime": s_prime}
-    return d
-
-
-def single_play(env, epsilon=.9, model=None):
+def single_play(env, epsilon=.9, model=None, memory=None):
+    env.ale.setInt(b'frame_skip', 4)
+    mem = memory or ReplayMemory()
     model = model or load_model()
-    observation = env.reset()
-    history = [process_rgb(observation) for _ in range(4)]
+    initial_screen = env.reset()
+    mem.burnin(initial_screen)
     rewards = []
     train_labels = []
-    D = []
-    env.ale.setInt(b'frame_skip', 4)
     while True:
-        # Need to render only if recording
-        #env.render()
 
-        # Take Action!
-        action = choose_action(env, history, model, epsilon)
-        observation, reward, done, info = env.step(action)
-        observation = process_rgb(observation)
+        # Take Action
+        action = choose_action(env, mem.current_state(), model, epsilon)
+        s_prime, reward, terminal, info = env.step(action)
+        mem.add(s_prime, reward, action, terminal)
         rewards.append(reward)
 
         # Check for breaking condition
         if info:
             print(info)
-        if done:
+        if terminal:
             msg = ("Sum Rewards: " + str(np.sum(rewards)))
             print(msg)
             break
-
-        # Update Replay Data
-        D.append(cache_data(observation, history, reward, action))
-
-        # Update history
-        history.append(observation)
-        history.pop(0)
-    return D
-
+    return mem
 
 def parse_args():
     parser = argparse.ArgumentParser()
