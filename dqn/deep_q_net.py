@@ -48,7 +48,7 @@ class DQN:
         self.model.compile(loss=custom_loss, optimizer=self.optimizer)
         self.target_model = copy(self.model)
 
-    def fit(self, memory, update_target_model=False, n_updates=13):
+    def fit(self, memory, update_target_model=False, n_updates=5):
         if update_target_model:
             self.target_model = copy(self.model)
         errs = []
