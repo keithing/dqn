@@ -15,5 +15,4 @@ reboot
 # virtualenv -p python3 py3
 # source ~/.py3/bin/activate
 # echo -e "\nsource ~/.py3/bin/activate"
-# git clone git@github.com:keithing/dqn.git
 # pip install -e dqn
