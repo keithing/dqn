@@ -10,3 +10,10 @@ apt-get install -y cuda
 echo -e "\nexport PATH=/usr/local/cuda/bin:$PATH\n\nexport LD_LIBRARY_PATH=/usr/local/cuda/lib64" >> .bashrc
 #Theano RC here
 reboot
+
+# After reboot, run following commands
+# virtualenv -p python3 py3
+# source ~/.py3/bin/activate
+# echo -e "\nsource ~/.py3/bin/activate"
+# git clone git@github.com:keithing/dqn.git
+# pip install -e dqn
