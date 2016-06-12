@@ -51,12 +51,8 @@ class DQN:
     def fit(self, memory, update_target_model=False, n_updates=5):
         if update_target_model:
             self.target_model = copy(self.model)
-        errs = []
-        for _ in range(n_updates):
-            X, Y = gen_minibatch(memory, self.batchsize, self.target_model)
-            err = self.model.train_on_batch(X, Y)
-            errs.append(err)
-        print("Err: {}".format(np.mean(errs)), flush=True)
+        X, Y = gen_minibatch(memory, self.batchsize*n_updates, self.target_model)
+        self.model.fit(X, Y, batch_size=self.batchsize, verbose=2, nb_epoch=1)
 
     def load_model(self):
         model = model_from_json(open(self.model_json).read())

@@ -1,6 +1,7 @@
 from datetime import datetime
 
-import gym import numpy as np
+import gym
+import numpy as np
 
 from dqn import DQN, ReplayMemory
 from play import single_play
@@ -13,13 +14,14 @@ if __name__ == "__main__":
     while True:
         epsilon = max(1 - (cnt / 30000), .1)
         start_new_epoch = cnt % 200 == 0
-        while len(mem.events) < 50000:
+        while len(mem.events) < 1000:
             # Create a history to train on
             mem = single_play(env, epsilon, dqn.model, mem)
             print("History size: {}".format(len(mem.events)), flush=True)
         try:
-            mem = single_play(env, epsilon, dqn.model, mem)
-            dqn.fit(mem, update_target_model = start_new_epoch, n_updates=5)
+            for _ in range(50):
+                mem = single_play(env, epsilon, dqn.model, mem)
+            dqn.fit(mem, update_target_model = start_new_epoch, n_updates=500)
         except Exception as e:
             print(e)
         if start_new_epoch:
