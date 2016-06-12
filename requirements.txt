@@ -1,0 +1,6 @@
+cython
+Pillow
+scipy
+numpy
+pandas
+git+git://github.com/Theano/Theano.git
