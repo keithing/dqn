@@ -13,8 +13,6 @@ if __name__ == "__main__":
     mem = ReplayMemory(lookbehind=4, max_size=1e6)
     env = gym.make('Breakout-v0')
     cnt = 0
-    tf_session = tf.Session(graph = dqn.model)
-    tf_session.run("init/init")
     while True:
         epsilon = max(1 - (cnt / 30000), .1)
         start_new_epoch = cnt % 200 == 0
