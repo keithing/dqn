@@ -1,1 +1,1 @@
-python dqn/train.py > log.txt 2>&1 &
+python dqn/train.py
