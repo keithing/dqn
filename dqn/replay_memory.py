@@ -25,7 +25,8 @@ class ReplayMemory():
     def add(self, s_prime, reward, action, terminal):
         s_prime = None if terminal else process_rgb(s_prime)
         event = {"s_prime": s_prime, "reward": reward, "action": action}
-        self.events.append(event)
+        if not terminal:
+            self.events.append(event)
         if len(self.events) > self.max_size:
             self.events.pop(0)
 

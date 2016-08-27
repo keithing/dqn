@@ -18,12 +18,12 @@ def bias_var(shape, name="bias"):
   return tf.Variable(initial, name=name)
 
 
-def c_layer(X, weight_shape, bias_shape, strides, scope):
+def c_layer(X, weight_shape, stride, scope):
     """Convolutional layer"""
     with tf.variable_scope(scope):
         w = weight_var(weight_shape)
-        b = bias_var(bias_shape)
-        c = tf.nn.conv2d(X, w, strides=strides, padding='SAME')
+        b = bias_var([weight_shape[-1]])
+        c = tf.nn.conv2d(X, w, strides=[1, stride, stride, 1], padding='VALID')
         h = tf.nn.relu(c + b)
     return h
 
@@ -51,21 +51,21 @@ with tf.variable_scope("input"):
     gamma = tf.placeholder(tf.float32, name="gamma")
 
 # Convolutional layers
-h_0 = c_layer(s, [8, 8, 4, 32], [32], [1, 4, 4, 1], "h_0")
-h_1 = c_layer(h_0, [20, 20, 32, 64], [64], [1, 2, 2, 1], "h_1")
-h_2 = c_layer(h_1, [9, 9, 64, 64], [64], [1, 1, 1, 1], "h_2")
+h_0 = c_layer(s, [8, 8, 4, 32], 4, "h_0")
+h_1 = c_layer(h_0, [4, 4, 32, 64], 2, "h_1")
+h_2 = c_layer(h_1, [3, 3, 64, 64], 1, "h_2")
 with tf.variable_scope("h2_flat"):
-    h_2_flat = tf.reshape(h_2, [-1, 11 * 11 * 64])
+    h_2_flat = tf.reshape(h_2, [-1, 7 * 7 * 64])
 
 # Fully connected layers
-h_3 = f_layer(h_2_flat, [11 * 11 * 64, 512], [512], True, "h_3")
+h_3 = f_layer(h_2_flat, [7 * 7 * 64, 512], [512], True, "h_3")
 q_hats = f_layer(h_3, [512, 6], [6], False, "output")
 
 # Training
 with tf.variable_scope("train"):
     q = tf.add(r, tf.mul(gamma, tf.reduce_max(q_prime)))
     q_hat = tf.gather(q_hats, a)
-    mse = tf.reduce_mean(tf.squared_difference(q_hat, q))
+    mse = tf.reduce_mean(tf.clip_by_value(tf.squared_difference(q_hat, q), 0, 1))
     train_step = tf.train.AdamOptimizer(0.05).minimize(mse)
 
 # Initialization
@@ -79,52 +79,58 @@ with tf.variable_scope("init"):
 
 class DQN:
 
-    def __init__(self, batchsize=32, checkpoint_path="cnn.ckpt"):
+    def __init__(self, batchsize=32, warm_start=None, ckpt_dir="."):
         self.batchsize = batchsize
-        self.checkpoint_path = checkpoint_path
         self.session = tf.Session()
         self.target_session = tf.Session()
-	self.saver = tf.train.Saver()
-        if os.path.exists(self.checkpoint_path):
-            print("Loading existing model.")
-            self.saver.restore(self.session, self.checkpoint_path)
+        self.saver = tf.train.Saver()
+        self.ckpt_dir = ckpt_dir
+        if warm_start:
+            self.saver.restore(self.session,
+                               os.path.join(self.ckpt_dir, warm_start))
         else:
-            print("Initializing a new model.")
             self.session.run(init)
         self.refresh_target_network()
 
     def fit(self, memory, n_updates=5):
+        errs = []
         for _ in range(n_updates):
-            batch = gen_minibatch(memory, self.batchsize)
-            s_, a_, r_, q_prime_ = batch
-            err = tf_session.run(train_step,
-                feed_dict = {s: s_, a: a_, r: r_, q_prime: q_prime_, gamma: .99})
-            print(err, flush=True)
+            s_, a_, r_, q_prime_ = self.gen_minibatch(memory)
+            _, err = self.session.run(
+                [train_step, mse],
+                feed_dict = {s: s_, a: a_, r: r_, q_prime: q_prime_, gamma: .99}
+            )
+            errs.append(err)
+        print(np.mean(errs), flush=True)
 
     def predict(self, data):
-        return self.session.run(q_hats, feed_dict = {s: sdata})
+        return self.session.run(q_hats, feed_dict = {s: data})
 
-    def checkpoint(self):
-        self.saver.save(self.session, self.checkpoint_path)
+    def checkpoint(self, ckpt_name):
+        path = os.path.join(self.ckpt_dir, ckpt_name) 
+        self.saver.save(self.session, path)
 
-    def refresh_target_network(self):
-        self.checkpoint()
-        self.saver.restore(self.target_session, self.checkpoint_path)
+    def refresh_target_network(self, ckpt_name="refresh_target.ckpt"):
+        path = os.path.join(self.ckpt_dir, ckpt_name) 
+        self.checkpoint(ckpt_name)
+        self.saver.restore(self.target_session, path)
 
-    def gen_minibatch(self.memory):
+    def gen_minibatch(self, memory):
         samples = memory.sample(self.batchsize)
         s_ = []
         q_prime_ = []
         a_ = []
         r_ = []
         for sample in samples:
-            s_.append(sample["s"])
+            s_.append(np.swapaxes(sample["s"], 0, 2))
             a_.append(sample["action"])
-            r_.append(sample["reward"])
+            reward = np.zeros(6)
+            reward[sample["action"]] = sample["reward"]
+            r_.append(reward)
             s_prime = [np.swapaxes(sample["s_prime"], 0, 2)]
             q_hats_ = self.target_session.run(q_hats,  feed_dict = {s: s_prime})
-            q_prime_.append(np.max(q_hats_))
-        return s_, a_, r_, q_prime_
+            q_prime_.append(q_hats_)
+        return s_, a_, np.squeeze(r_), np.squeeze(q_prime_)
 
     def close_sessions():
         self.session.close()

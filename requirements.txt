@@ -2,8 +2,5 @@ cython
 Pillow==2.9.0
 scipy
 numpy
-h5py
 gym
 gym[atari]
-git+git://github.com/Theano/Theano.git
-git+git://github.com/fchollet/keras.git

@@ -2,17 +2,11 @@ import argparse
 import logging
 
 import gym
-from keras.models import model_from_json
 import numpy as np
 
 from dqn import ReplayMemory
 
 
-
-def load_model():
-    model = model_from_json(open("models/cnn.json").read())
-    model.load_weights("models/cnn.h5")
-    return(model)
 
 
 def play(n_times, record=False, epsilon=.9):
@@ -30,15 +24,20 @@ def choose_action(env, history, model, epsilon=.9):
     Decide whether to explore or exploit past information.
     """
     explore = lambda: np.random.rand(env.action_space.n)
-    exploit = lambda: model.predict(np.array([history]))[0]
-    rewards = explore() if np.random.rand(1) < epsilon else exploit()
+    #exploit = lambda: model.predict(np.array([history]))
+    exploit = lambda: model.predict(np.swapaxes(np.array([history]), 1, 4))
+    try:
+        rewards = explore() if np.random.rand(1) < epsilon else exploit()
+    except Exception as e:
+        print(e)
+        rewards = explore()
     return np.argmax(rewards)
 
 
 def single_play(env, epsilon=.9, model=None, memory=None):
     env.ale.setInt(b'frame_skip', 4)
     mem = memory or ReplayMemory()
-    model = model or load_model()
+    model = model
     initial_screen = env.reset()
     mem.burnin(initial_screen)
     rewards = []
