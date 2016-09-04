@@ -1,12 +1,13 @@
 import numpy as np
 from scipy.misc import imresize
 
+
 def grayscale(rgb):
     """
     http://stackoverflow.com/questions/12201577/
     how-can-i-convert-an-rgb-image-into-grayscale-in-python
     """
-    r, g, b = rgb[:,:,0], rgb[:,:,1], rgb[:,:,2]
+    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
     gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
     return gray
 

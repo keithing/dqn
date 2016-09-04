@@ -4,17 +4,16 @@ import logging
 import gym
 import numpy as np
 
-from dqn import ReplayMemory
+from dqn import DQN, ReplayMemory
 
 
-
-
-def play(n_times, record=False, epsilon=.9):
+def play(save_dir, warm_start, n_times=1, record=False, epsilon=.9):
     env = gym.make('Breakout-v0')
+    dqn = DQN(ckpt_dir="dqn/ckpts", warm_start=warm_start)
     if record:
-        env.monitor.start('/home/kingersoll/share/breakout', force=True)
+        env.monitor.start(save_dir, force=True)
     for i_episode in range(n_times):
-        single_play(env, epsilon)
+        single_play(env, epsilon, model=dqn)
     if record:
         env.monitor.close()
 
@@ -24,7 +23,6 @@ def choose_action(env, history, model, epsilon=.9):
     Decide whether to explore or exploit past information.
     """
     explore = lambda: np.random.rand(env.action_space.n)
-    #exploit = lambda: model.predict(np.array([history]))
     exploit = lambda: model.predict(np.swapaxes(np.array([history]), 1, 4))
     try:
         rewards = explore() if np.random.rand(1) < epsilon else exploit()
@@ -61,6 +59,8 @@ def single_play(env, epsilon=.9, model=None, memory=None):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--save_dir")
+    parser.add_argument("-w", "--warm_start")
     parser.add_argument("-n", "--n_times", default=1, type=int)
     parser.add_argument("-r", "--record", action="store_true")
     parser.add_argument("-e", "--epsilon", default=1.0, type=float)

@@ -1,6 +1,6 @@
 apt-get update
 apt-get -y dist-upgrade
-apt-get install -y gcc g++ gfortran build-essential git wget linux-image-generic libopenblas-dev python-setuptools python-dev python3-dev cmake libhdf5-dev
+apt-get install -y gcc g++ gfortran build-essential git wget linux-image-generic libopenblas-dev python-setuptools python-dev python3-dev cmake libhdf5-dev xvfb libav-tools
 easy_install pip
 pip install --upgrade virtualenv
 wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_7.0-28_amd64.deb
