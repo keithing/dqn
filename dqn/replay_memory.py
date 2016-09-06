@@ -26,24 +26,21 @@ class ReplayMemory():
     def add(self, s_prime, reward, action, terminal):
         s_prime = None if terminal else process_rgb(s_prime)
         event = {"s_prime": s_prime, "reward": reward, "action": action}
-        if not terminal:
-            self.events.append(event)
+        self.events.append(event)
         if len(self.events) > self.max_size:
             self.events.pop(0)
 
     def get(self, i):
-        """ A missing 's_prime' in events indicates
-        a terminal event.  Missing 'action' indicates
-        an initial event before an action was taken.
-        This returns an event only if the event has
-        an associated action, has at least as many
-        pre states as lookbehind and doesn't cross
-        a terminal event."""
         event = {}
         events = self.events[i - self.lookbehind - 1:i]
-        s = [x["s_prime"] for x in events[:-1]]
-        s_prime = [x["s_prime"] for x in events[1:]]
-        if events and events[-1]["action"]:
+        states = []
+        for e in events:
+            if e["s_prime"] is None:
+                break
+            states.append(e["s_prime"])
+        if len(states) == (self.lookbehind + 1):
+            s = states[:-1]
+            s_prime = states[1:]
             event["action"] = events[-1]["action"]
             event["reward"] = events[-1]["reward"]
             event["s"] = s
