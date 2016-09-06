@@ -10,12 +10,12 @@ import tensorflow as tf
 
 
 def weight_var(shape, name="weights"):
-    initial = tf.truncated_normal(shape, stddev=0.1)
+    initial = tf.truncated_normal(shape, stddev=0.01)
     return tf.Variable(initial, name=name)
 
 
 def bias_var(shape, name="bias"):
-    initial = tf.constant(0.1, shape=shape)
+    initial = tf.constant(0.01, shape=shape)
     return tf.Variable(initial, name=name)
 
 
@@ -67,8 +67,8 @@ with tf.variable_scope("train"):
     q = tf.add(r, tf.mul(gamma, tf.reduce_max(q_prime, 1)))
     q_hat = tf.gather(tf.reshape(q_hats, [-1]), a)
     squared_errors = tf.squared_difference(q_hat, q)
-    mse = tf.reduce_mean(tf.clip_by_value(squared_errors, 0, 1))
-    train_step = tf.train.AdamOptimizer(0.0001).minimize(mse)
+    sse = tf.reduce_sum(tf.clip_by_value(squared_errors, 0, 1))
+    train_step = tf.train.AdamOptimizer(0.00001).minimize(sse)
 
 # Initialization
 with tf.variable_scope("init"):
@@ -97,7 +97,7 @@ class DQN:
         for _ in range(n_updates):
             s_, a_, r_, q_prime_ = self.gen_minibatch(memory)
             _, err, x, y = self.session.run(
-                [train_step, mse,q, q_hat],
+                [train_step, sse,q, q_hat],
                 feed_dict = {s: s_, a: a_, r: r_,
                              q_prime: q_prime_, gamma: .99})
             errs.append(err)

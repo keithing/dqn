@@ -9,7 +9,7 @@ from dqn import DQN, ReplayMemory
 
 def play(save_dir, warm_start, n_times=1, record=False, epsilon=.9):
     env = gym.make('Breakout-v0')
-    dqn = DQN(ckpt_dir="dqn/ckpts", warm_start=warm_start)
+    dqn = DQN(warm_start=warm_start)
     if record:
         env.monitor.start(save_dir, force=True)
     for i_episode in range(n_times):
@@ -18,18 +18,15 @@ def play(save_dir, warm_start, n_times=1, record=False, epsilon=.9):
         env.monitor.close()
 
 
-def choose_action(env, history, model, epsilon=.9):
+def choose_action(env, s, model, epsilon=.9):
     """
     Decide whether to explore or exploit past information.
     """
-    explore = lambda: np.random.rand(env.action_space.n)
-    exploit = lambda: model.predict(np.swapaxes(np.array([history]), 1, 4))
-    try:
-        rewards = explore() if np.random.rand(1) < epsilon else exploit()
-    except Exception as e:
-        print(e)
-        rewards = explore()
-    return np.argmax(rewards)
+    if np.random.rand(1) < epsilon:
+        action = np.random.randint(0, env.action_space.n)
+    else:
+        action = np.argmax(model.predict([np.swapaxes(s, 0, 2)]))
+    return action
 
 
 def single_play(env, epsilon=.9, model=None, memory=None):
@@ -53,7 +50,7 @@ def single_play(env, epsilon=.9, model=None, memory=None):
             print(info)
         if terminal:
             msg = ("Sum Rewards: " + str(np.sum(rewards)))
-            print(msg)
+            #print(msg)
             break
     return mem
 

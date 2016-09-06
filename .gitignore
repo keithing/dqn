@@ -5,3 +5,4 @@ theanorc
 *egg-info
 ckpts/
 videos/
+models/
