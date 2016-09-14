@@ -1,31 +1,28 @@
 from datetime import datetime
 
 import gym
+import numpy as np
 
-from dqn import DQN, ReplayMemory
-from play import single_play
+from dqn import Atari, DQN, ReplayMemory
 
+def train_dqn(batchisize=32, lookbehind=4, max_memory_size=1e6,
+              burnin=1000, games_per_round=100,
+              updates_per_round=1000, eps_dec_per_round=.0005,
+              rounds_per_epoch=100):
 
-if __name__ == "__main__":
     dqn = DQN(batchsize=32)
-    mem = ReplayMemory(lookbehind=4, max_size=500000)
-    env = gym.make('Breakout-v0')
+    mem = ReplayMemory(lookbehind=4, max_size=max_memory_size)
+    env = Atari(policy=dqn)
     i = 0
     epoch = 0
+    mem.add(env.play(n_games=burnin, epsilon=1.0))
     while True:
-        epsilon = max(1 - (i / 50000), .1)
-        start_new_epoch = i % 5000 == 0
-        while len(mem.events) < 30000:
-            # Create a history to train on
-            mem = single_play(env, epsilon, dqn, mem)
-            print("History size: {}".format(len(mem.events)), flush=True)
-        try:
-            for _ in range(10):
-                mem = single_play(env, epsilon, dqn, mem)
-            dqn.fit(mem, n_updates=200)
-        except Exception as e:
-            print(e)
-        if start_new_epoch:
+        epsilon = max(1 - (i * eps_dec_per_round), .05)
+        events = env.play(n_games=games_per_round, epsilon=epsilon)
+        mem.add(events)
+        dqn.fit(mem, n_updates=updates_per_round)
+        print(np.sum([x["reward"] for x in events]) / 10)
+        if i % rounds_per_epoch == 0:
             epoch += 1
             print("\n\n*****************")
             print("Round: ", str(i))
@@ -35,3 +32,6 @@ if __name__ == "__main__":
             dqn.checkpoint("models/epoch_{}.cpkt".format(epoch))
             dqn.update_target_network()
         i += 1
+
+if __name__ == "__main__":
+    train_dqn(burnin=10)
