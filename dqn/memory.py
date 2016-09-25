@@ -23,6 +23,9 @@ class ReplayMemory():
         mem["reward"] = events[-1]["reward"]
         return mem, missing
 
+    def wipe(self):
+        self.events = []
+
     def sample(self, n):
         samples = []
         while len(samples) < n:
