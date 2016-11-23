@@ -25,13 +25,13 @@ def process_rgb(rbg):
 class AtariBot:
 
     def __init__(self, game, policy="ddqn", max_mem_size=1e6,
-                 lookbehind=4, warm_start=None):
+                 window=4, warm_start=None):
         self.game = game
         self.policy = self._get_policy(policy, warm_start)
-        self.memory = ReplayMemory(lookbehind=lookbehind, max_size=max_mem_size)
+        self.memory = ReplayMemory(window=window, max_size=max_mem_size)
         self.env = gym.make(game)
         self.env.ale.setInt(b'frame_skip', 4)
-        self._lookbehind = lookbehind 
+        self._window = window
 
     def _get_policy(self, policy_str, warm_start):
         if policy_str == "ddqn":
@@ -42,7 +42,6 @@ class AtariBot:
             raise ValueError("policy must be 'dqn' or 'ddqn'")
         return policy
           
-    
     def play(self, n_games=1, epsilon=0.0, monitor_dir=None, verbose=True):
         """ Play multiple games, optionally recording video 
         of gameplay and archiving events in memory."""
@@ -78,18 +77,18 @@ class AtariBot:
     def _single_play(self, epsilon):
         s_prime = self.env.reset()
         s_prime = process_rgb(s_prime)
-        s = [s_prime] * self._lookbehind
+        s = [s_prime] * self._window
         events = []
         while True:
-            s = s[-(self._lookbehind - 1):] + [s_prime]
+            s = s[-(self._window - 1):] + [s_prime]
             action = self.choose_action(s, epsilon)
             s_prime, reward, terminal, info = self.env.step(action)
             s_prime = process_rgb(s_prime)
-            events.append({"s_prime": s_prime if not terminal else None,
-                           "reward": reward,
-                           "action": action})
             if terminal:
                 break
+            events.append({"s_prime": s_prime,
+                           "reward": reward,
+                           "action": action})
         return events
 
     def train(self, ckpt_dir, burnin=1000, games_per_round=100,
@@ -120,6 +119,5 @@ class AtariBot:
 
 if __name__ == "__main__":
     robot = AtariBot(game="Breakout-v0",
-                     policy="ddqn",
-                     warm_start="models/round_0.ckpt")
-    robot.train(ckpt_dir="models", burnin=10, n_rounds=1, updates_per_round=10, games_per_round=10)
+                     policy="ddqn")
+    robot.train(ckpt_dir="models", burnin=10, n_rounds=100, updates_per_round=5, games_per_round=3)
