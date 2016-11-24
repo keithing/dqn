@@ -13,7 +13,7 @@ class ReplayMemory():
             self.episodes.pop(0)
 
     def wipe(self):
-        self.events = []
+        self.episodes = []
 
     def sample(self, n):
         xs = np.random.randint(0, high=len(self.episodes), size=n)
