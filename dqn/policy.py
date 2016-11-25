@@ -93,7 +93,7 @@ class DQNPolicy:
         self.target_session.close()
 
     def _minibatch(self, memory, batchsize, gamma):
-        samples = memory.sample(batchsize)
+        samples = memory.sample(batchsize, self.window)
         s, a, q = [], [], []
         for sample in samples:
             s_prime = [np.swapaxes(sample["s_prime"], 0, 2)]
