@@ -1,7 +1,8 @@
 import tempfile
 
 import numpy as np
-import tensorflow as tf 
+import tensorflow as tf
+
 ###############################################################################
 # Layer Creation Helper Functions
 ###############################################################################
