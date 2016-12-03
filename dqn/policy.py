@@ -48,7 +48,7 @@ def fc_layer(X, weight_shape, bias_shape, relu, scope):
 
 class DQNPolicy:
 
-    def __init__(self, window=4, warm_start=None):
+    def __init__(self, window=4, warm_start=None, logdir="/tmp/dqn"):
         self.window = window
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -56,6 +56,8 @@ class DQNPolicy:
             self.session = tf.Session()
             self.target_session = tf.Session()
             self.saver = tf.train.Saver()
+            self.summary_writer = tf.train.SummaryWriter(logdir,
+                                                         graph=self.graph)
         if warm_start:
             self.saver.restore(self.session, warm_start)
         else:
@@ -66,11 +68,12 @@ class DQNPolicy:
         errs = []
         for _ in range(n_updates):
             s, a, q = self._minibatch(memory, batchsize, gamma=gamma)
-            _, err = self.session.run(
-                [self._train_step, self._sse],
+            _, err, summary = self.session.run(
+                [self._train_step, self._sse, self._summary],
                 feed_dict = {self._s: s, self._a: a, self._q: q})
             errs.append(err)
         if verbose:
+            self.summary_writer.add_summary(summary)
             err_mean = np.mean(errs)
             err_se = np.std(errs)
             msg = "Error: {} +/- {}".format(err_mean, err_se)
@@ -125,7 +128,7 @@ class DQNPolicy:
         self._h_0 = conv_layer(self._s, [8, 8, window, 32], 4, "h_0")
         self._h_1 = conv_layer(self._h_0, [4, 4, 32, 64], 2, "h_1")
         self._h_2 = conv_layer(self._h_1, [3, 3, 64, 64], 1, "h_2")
-        with tf.variable_scope("h2_flat"):
+        with tf.variable_scope("h2_reshape"):
             self._h_2_flat = tf.reshape(self._h_2, [-1, 7 * 7 * 64])
 
         # Fully connected layers
@@ -136,15 +139,21 @@ class DQNPolicy:
         # Training
         with tf.variable_scope("train"):
             self._q_hat = tf.gather(tf.reshape(self._q_hats, [-1]), self._a)
-            self._squared_errors = tf.squared_difference(self._q_hat, self._q)
-            clip_err = tf.clip_by_value(self._squared_errors, 0, 1)
-            self._sse = tf.reduce_sum(clip_err)
-            opt = tf.train.AdamOptimizer(0.00001)
-            self._train_step = opt.minimize(self._sse)
+            self._se = tf.squared_difference(self._q_hat, self._q)
+            self._clip_err = tf.clip_by_value(self._se, 0, 1)
+            self._sse = tf.reduce_sum(self._clip_err)
+            self._opt = tf.train.AdamOptimizer(0.00001)
+            self._train_step = self._opt.minimize(self._sse)
+
+        # Summary
+        with tf.variable_scope("summary"):
+            tf.scalar_summary('Sum of Clipped Squared Errors', self._sse)
+            self._summary = tf.merge_all_summaries()
 
         # Initialization
         with tf.variable_scope("init"):
             self._init = tf.initialize_all_variables()
+
 
 class DDQNPolicy(DQNPolicy):
 
